@@ -20,7 +20,7 @@ import adminRoutes from "./routes/admin.js";
 import { protect } from './middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import setupSwagger from './swagger.js';
-
+const AllowedOrigin = [process.env.FRONTEND_URL, "*","http://localhost:5173","https://parkvechicle-ot1a.vercel.app"];
 
 
 // Load .env from server/ folder explicitly so running from project root still works
@@ -64,7 +64,7 @@ try {
 
 // Middleware
 // Allow the specific local frontend in dev (if provided), otherwise allow all
-const AllowedOrigin = [process.env.FRONTEND_URL, "*","http://localhost:5173","https://parkvechicle-ot1a.vercel.app"];
+
 app.use(
   cors({
     origin: AllowedOrigin,
