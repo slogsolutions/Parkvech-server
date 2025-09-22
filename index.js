@@ -49,7 +49,7 @@ const server = http.createServer(app);
 //socket CORS
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: AllowedOrigin,
     methods: ['GET', 'POST'],
   },
 });
