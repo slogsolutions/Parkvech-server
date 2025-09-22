@@ -60,7 +60,11 @@ try {
 
 // Middleware
 // Allow the specific local frontend in dev (if provided), otherwise allow all
+<<<<<<< HEAD
 const AllowedOrigin = [process.env.FRONTEND_URL, "*","http://localhost:5173"];
+=======
+const AllowedOrigin = [process.env.FRONTEND_URL, "*"];
+>>>>>>> f68627259b39ada8958f1fa6095c98e2ca6fe0fb
 app.use(
   cors({
     origin: AllowedOrigin,
