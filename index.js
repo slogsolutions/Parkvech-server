@@ -64,7 +64,7 @@ try {
 
 // Middleware
 // Allow the specific local frontend in dev (if provided), otherwise allow all
-const AllowedOrigin = [process.env.FRONTEND_URL, "*","http://localhost:5173"];
+const AllowedOrigin = [process.env.FRONTEND_URL, "*","http://localhost:5173","https://parkvechicle-ot1a.vercel.app"];
 app.use(
   cors({
     origin: AllowedOrigin,
