@@ -1,0 +1,786 @@
+openapi: 3.0.3
+info:
+  title: ParkVech API
+  version: 1.0.0
+  description: |
+    OpenAPI (Swagger) spec for the ParkVech backend. Generated from your
+    Express route files. Endpoints that require authentication are marked
+    with `security: - bearerAuth: []` (JWT bearer token expected in the
+    Authorization header).
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Error message"
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        vehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vehicle'
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+    Vehicle:
+      type: object
+      properties:
+        _id:
+          type: string
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: string
+        licensePlate:
+          type: string
+        chassisNumber:
+          type: string
+        registrationDate:
+          type: string
+          format: date
+    Booking:
+      type: object
+      properties:
+        _id:
+          type: string
+        userId:
+          type: string
+        parkingSpaceId:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        paymentStatus:
+          type: string
+          example: pending
+    ParkingSpace:
+      type: object
+      properties:
+        _id:
+          type: string
+        owner:
+          type: string
+        location:
+          type: object
+          properties:
+            type:
+              type: string
+              example: Point
+            coordinates:
+              type: array
+              items:
+                type: number
+        photos:
+          type: array
+          items:
+            type: string
+            format: uri
+    KYCSubmission:
+      type: object
+      properties:
+        _id:
+          type: string
+        user:
+          type: string
+        status:
+          type: string
+          example: pending
+    PaymentOrder:
+      type: object
+      properties:
+        orderId:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+    description: Authentication and user management
+  - name: booking
+    description: Booking-related endpoints (create, list, update)
+  - name: kyc
+    description: KYC submission and admin approval flows
+  - name: parking
+    description: Parking space management
+  - name: payment
+    description: Payment endpoints (Razorpay integration)
+
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - auth
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '201':
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Auth token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/google:
+    post:
+      tags:
+        - auth
+      summary: Sign in / register with Google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tokenId:
+                  type: string
+      responses:
+        '200':
+          description: Auth token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /api/auth/me:
+    get:
+      tags:
+        - auth
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/forgot-password:
+    post:
+      tags:
+        - auth
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Email sent (if user exists)
+
+  /api/auth/reset-password/{token}:
+    post:
+      tags:
+        - auth
+      summary: Reset password using token
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Password reset successful
+
+  /api/auth/verify-email/{token}:
+    get:
+      tags:
+        - auth
+      summary: Verify user email
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verified
+
+  /api/auth/resend-verification:
+    post:
+      tags:
+        - auth
+      summary: Resend email verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Verification email resent
+
+  /api/booking:
+    post:
+      tags:
+        - booking
+      summary: Create a booking
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Booking'
+      responses:
+        '201':
+          description: Booking created
+    
+  /api/booking/my-bookings:
+    get:
+      tags:
+        - booking
+      summary: Get bookings for current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+
+  /api/booking/provider-bookings:
+    get:
+      tags:
+        - booking
+      summary: Get bookings for provider (owner)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of bookings for provider
+
+  /api/booking/{id}/status:
+    put:
+      tags:
+        - booking
+      summary: Update booking status
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Updated booking
+
+  /api/booking/{id}:
+    get:
+      tags:
+        - booking
+      summary: Get booking by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+    delete:
+      tags:
+        - booking
+      summary: Delete booking
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /api/booking/{id}/update-payment-status:
+    put:
+      tags:
+        - booking
+      summary: Update payment status for booking
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentStatus:
+                  type: string
+      responses:
+        '200':
+          description: Payment status updated
+
+  /api/booking/add-vehicle:
+    post:
+      tags:
+        - booking
+      summary: Add vehicle to authenticated user's profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [make, model, year, licensePlate]
+              properties:
+                make:
+                  type: string
+                model:
+                  type: string
+                year:
+                  type: string
+                licensePlate:
+                  type: string
+                chassisNumber:
+                  type: string
+                registrationDate:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Vehicle added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  vehicles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vehicle'
+
+  /api/booking/data/vehicles:
+    get:
+      tags:
+        - booking
+      summary: Get vehicles for current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+
+  /api/booking/data/vehicles/{vehicleId}:
+    delete:
+      tags:
+        - booking
+      summary: Delete a vehicle for current user
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: vehicleId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vehicle deleted
+
+  /api/kyc:
+    post:
+      tags:
+        - kyc
+      summary: Submit KYC (multipart/form-data)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                idDocument:
+                  type: string
+                  format: binary
+                otherFields:
+                  type: string
+      responses:
+        '201':
+          description: KYC submission received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCSubmission'
+
+  /api/kyc/status:
+    get:
+      tags:
+        - kyc
+      summary: Get KYC status for current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Status object
+
+  /api/kyc/admin:
+    get:
+      tags:
+        - kyc
+      summary: Admin - list all KYC submissions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of KYC submissions
+
+  /api/kyc/admin/approve/{selectedKycId}:
+    post:
+      tags:
+        - kyc
+      summary: Admin approve a KYC submission
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: selectedKycId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approved
+
+  /api/parking:
+    post:
+      tags:
+        - parking
+      summary: Register a new parking space
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                location:
+                  type: object
+      responses:
+        '201':
+          description: Parking space created
+    get:
+      tags:
+        - parking
+      summary: Get list of parking spaces
+      parameters:
+        - in: query
+          name: lat
+          schema:
+            type: number
+        - in: query
+          name: lng
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Array of parking spaces
+
+  /api/parking/{id}:
+    put:
+      tags:
+        - parking
+      summary: Update parking space (multipart for photos)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                otherFields:
+                  type: string
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags:
+        - parking
+      summary: Delete a parking space
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+    get:
+      tags:
+        - parking
+      summary: Get parking space by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Parking space object
+
+  /api/parking/my-spaces:
+    get:
+      tags:
+        - parking
+      summary: Get parking spaces owned by current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of parking spaces
+
+  /api/parking/availability/{spaceId}:
+    get:
+      tags:
+        - parking
+      summary: Get availability for a parking space
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Availability object
+
+  /api/payment/initiate-payment:
+    post:
+      tags:
+        - payment
+      summary: Create Razorpay order (initiate payment)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingId:
+                  type: string
+                amount:
+                  type: number
+      responses:
+        '200':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentOrder'
+        '400':
+          description: Bad request
+
+  /api/payment/verify-payment:
+    post:
+      tags:
+        - payment
+      summary: Verify Razorpay payment signature and update booking
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                razorpay_order_id:
+                  type: string
+                razorpay_payment_id:
+                  type: string
+                razorpay_signature:
+                  type: string
+                bookingId:
+                  type: string
+      responses:
+        '200':
+          description: Payment verified and booking updated
+        '400':
+          description: Signature mismatch or bad request
+
+
+# End of spec generated from provided route files
+# Note: For file uploads (multipart/form-data) OpenAPI shows a binary field. When
+# implementing clients, send actual files in that field.

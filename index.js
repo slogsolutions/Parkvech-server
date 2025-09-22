@@ -19,6 +19,9 @@ import axios from 'axios';
 import adminRoutes from "./routes/admin.js";
 import { protect } from './middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
+import setupSwagger from './swagger.js';
+
+
 
 // Load .env from server/ folder explicitly so running from project root still works
 const envPath = path.resolve(process.cwd(), 'server', '.env');
@@ -41,6 +44,7 @@ if (!hasMongo) {
 }
 
 const app = express();
+setupSwagger(app, '/api-docs');
 const server = http.createServer(app);
 //socket CORS
 const io = new Server(server, {
@@ -60,11 +64,7 @@ try {
 
 // Middleware
 // Allow the specific local frontend in dev (if provided), otherwise allow all
-<<<<<<< HEAD
-const AllowedOrigin = [process.env.FRONTEND_URL, "*","http://localhost:5173"];
-=======
 const AllowedOrigin = [process.env.FRONTEND_URL, "*"];
->>>>>>> f68627259b39ada8958f1fa6095c98e2ca6fe0fb
 app.use(
   cors({
     origin: AllowedOrigin,
