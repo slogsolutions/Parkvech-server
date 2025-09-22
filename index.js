@@ -42,6 +42,7 @@ if (!hasMongo) {
 
 const app = express();
 const server = http.createServer(app);
+//socket CORS
 const io = new Server(server, {
   cors: {
     origin: '*',
@@ -59,15 +60,14 @@ try {
 
 // Middleware
 // Allow the specific local frontend in dev (if provided), otherwise allow all
-const frontendOrigin = process.env.FRONTEND_URL || '*';
+const AllowedOrigin = [process.env.FRONTEND_URL, "*","http://localhost:5173"];
 app.use(
   cors({
-    origin: frontendOrigin,
+    origin: AllowedOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS',"PATCH"],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
-
 // Use JSON parser for application/json bodies
 app.use(express.json());
 
