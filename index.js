@@ -59,10 +59,10 @@ try {
 
 // Middleware
 // Allow the specific local frontend in dev (if provided), otherwise allow all
-const frontendOrigin = process.env.FRONTEND_URL || '*';
+const AllowedOrigin = [process.env.FRONTEND_URL, "*"];
 app.use(
   cors({
-    origin: frontendOrigin,
+    origin: AllowedOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS',"PATCH"],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
